@@ -1,2 +1,17 @@
-# carbon-emission-
-pyhton ai model for global climate change 
+Тип моего проекта:
+Telegram Bot для расчета углеродного следа автомобилей.
+
+Библиотеки, которые я буду использовать:
+python-telegram-bot – Для создания бота.
+
+requests – Для работы с внешними API (если нужно).
+
+Pandas – Для обработки и анализа данных (если нужно).
+
+Референсы, которые мне пригодятся:
+Telegram Bot API Documentation – Официальная документация.
+
+python-telegram-bot GitHub – Примеры кода для создания ботов.
+
+Teachable Machine – Для обучения моделей ИИ для распознавания машин.
+
