@@ -1,5 +1,4 @@
 import logging
-import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
@@ -13,19 +12,46 @@ logger = logging.getLogger(__name__)
 # Define states
 TRANSPORT, BRAND, ENGINE, LENGTH = range(4)
 
-# Car brands (expand as needed)
+
 CAR_BRANDS = [
     'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Nissan', 'Volkswagen', 'Hyundai', 'Kia', 'Mercedes-Benz', 'BMW',
     'Audi', 'Peugeot', 'Fiat', 'Renault', 'Skoda', 'Mazda', 'Mitsubishi', 'Jeep', 'Subaru', 'Volvo'
 ]
 
-# Carbon Interface API config
-CARBON_API_KEY = "ipubOmKpjgYbU4OahdZw"
-CARBON_API_URL = "https://www.carboninterface.com/api/v1/estimates"
-HEADERS = {
-    "Authorization": f"Bearer {CARBON_API_KEY}",
-    "Content-Type": "application/json"
+
+CAR_EMISSIONS = {
+    'Toyota': 0.192,
+    'Honda': 0.185,
+    'Ford': 0.198,
+    'Chevrolet': 0.200,
+    'Nissan': 0.188,
+    'Volkswagen': 0.190,
+    'Hyundai': 0.180,
+    'Kia': 0.178,
+    'Mercedes-Benz': 0.220,
+    'BMW': 0.210,
+    'Audi': 0.205,
+    'Peugeot': 0.180,
+    'Fiat': 0.170,
+    'Renault': 0.160,
+    'Skoda': 0.175,
+    'Mazda': 0.182,
+    'Mitsubishi': 0.195,
+    'Jeep': 0.210,
+    'Subaru': 0.200,
+    'Volvo': 0.205
 }
+
+# Motorcycle emissions constant (in kg CO₂ per cc per km)
+MOTORCYCLE_EMISSIONS = 0.02  # Adjust this as per average emission per cc
+
+# Carbon emission calculation function
+def calculate_car_emissions(brand, engine_size, km):
+    emission_factor = CAR_EMISSIONS.get(brand, 0.2)  # Default emission factor for unknown brands
+    return emission_factor * engine_size * km
+
+def calculate_motorcycle_emissions(engine_size, km):
+    return MOTORCYCLE_EMISSIONS * engine_size * km
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     keyboard = [
@@ -76,8 +102,13 @@ async def brand_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def engine_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['engine_size'] = update.message.text
-    await update.message.reply_text("Enter the length of your ride in km:")
-    return LENGTH
+    transport = context.user_data['transport']
+    if transport == 'motorcycle':
+        await update.message.reply_text("Enter the length of your ride in km:")
+        return LENGTH
+    else:
+        await update.message.reply_text("Enter the length of your ride in km:")
+        return LENGTH
 
 async def length_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data['length_km'] = float(update.message.text)
@@ -87,31 +118,17 @@ async def length_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     emissions = 0
 
     if transport == 'car':
-        payload = {
-            "type": "vehicle",
-            "distance_unit": "km",
-            "distance_value": km,
-            "vehicle_model_id": "vehicle_model:car",
-            "engine_size": engine,
-            "fuel_source": "gasoline"  # this could be dynamic
-        }
-        try:
-            response = requests.post(CARBON_API_URL, headers=HEADERS, json=payload)
-            response.raise_for_status()
-            emissions = response.json()['data']['attributes']['carbon_kg']
-        except Exception as e:
-            logger.error(f"API error: {e}")
-            await update.message.reply_text("Something went wrong while calculating emissions. Showing estimate instead.")
-            emissions = engine * 2.3 * km
+        brand = context.user_data['brand']
+        emissions = calculate_car_emissions(brand, engine, km)
 
     elif transport == 'motorcycle':
-        emissions = engine * 0.02 * km
+        emissions = calculate_motorcycle_emissions(engine, km)
+
     elif transport == 'train':
         emissions = 0.045 * km
+
     elif transport == 'plane':
         emissions = 0.15 * km
-    else:
-        emissions = 0
 
     result = f"Your estimated CO₂ emission is {emissions:.2f} kg."
     if emissions < 1:
