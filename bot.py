@@ -148,7 +148,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 if __name__ == '__main__':
-    app = ApplicationBuilder().token("8025705820:AAGfxtTnv2TT5zxnjkFkgNiJv1r45RcDKtk").build()
+    app = ApplicationBuilder().token("your code discord").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
